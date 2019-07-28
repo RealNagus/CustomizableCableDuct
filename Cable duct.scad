@@ -1,20 +1,18 @@
 /*
- * Ball bearing pusher - parametric version
+ * Parametric cable duct with cover
  * ========================================
  *
- * Creates a 3D printable objects that forces an axis or rod into a 
- * ball bearing. Much easier than doing this by hand...
+ * Create your own custom cable duct with desired dimensions and matching top cover.
  *
- * Created by Thomas Hessling <mail@dream-dimensions.de>. 
+ * Created by Thomas Heßling <mail@dream-dimensions.de>. 
  * License: Creative Commons - Attribution - Non-Commercial - Share Alike
  *
  * https://www.dream-dimensions.de
- * https://www.thingiverse.com/thing:3068893
+ * https://www.thingiverse.com/thing:3775502
  *
  * ChangeLog:
- *  - Initial release (2018-08-28)
- *    model creation works, need to test final part dimensions
- *
+ *  - Initial release (2019-07-28)
+ *    model creation works, first print successful.
  */
  
  
@@ -24,31 +22,31 @@
  */
 /* [General settings] */
 // Cable duct overall length
-cd_length = 150;
+cd_length = 70;
 // Cable duct width
-cd_width = 15;
+cd_width = 10;
 // Cable duct height
-cd_height = 15;
+cd_height = 10;
 // Number of fins
-cd_fins = 15;
+cd_fins = 8;
 // Fin width (approximate)
-cd_fin_width = 4;
-// Shell thickness
+cd_fin_width = 3;
+// Shell thickness (should be a multiple of your nozzle diameter)
 cd_shell = 1.2;
 
-// Which part to create?
+// Which part to create? Duct, cover or both.
 part = "both"; // [duct:Cable duct,cover:Duct top cove,both:Both parts"]
 
 
 /* [Advanced settings] */
-// Mounting feature size
-mf_length = 3;
-// Mounting feature angle
+// Mounting feature height
+mf_length = 2;
+// Mounting feature angle 
 mf_angle = 45;
 // Mounting feature depth
-mf_depth = 1;
+mf_depth = 0.8;
 // Mounting feature offset from top
-mf_top_offset = 1;
+mf_top_offset = 0.6;
 // Tolerance between cover and duct
 tol = 0.15;
 
@@ -65,8 +63,14 @@ cd_fin_spacing = (cd_length - cd_fin_width) / cd_fins;
 cd_slit_width = cd_fin_spacing - cd_fin_width;
 
 
+// Create the part
 print_part();
 
+
+
+/*
+	Create the part based on the part-variable: duct, cover or both
+*/
 module print_part()
 {
 	if (part == "duct") {
@@ -85,9 +89,12 @@ module print_part()
 */
 module clip_profile()
 {
+	// Make the the angle is properly defined and does not lead to geometry errors
 	assert(mf_angle > 0, "The angle must be greater than 0 deg.");
+	assert(mf_angle <= 90, "The angle cannot be greater than 90 deg.");
 	assert(mf_depth*tan(90-mf_angle)*2 <= mf_length, 
 		   "The mounting feature length is too small. Increase length or the angle.");
+	
 	polyp = [[0,0], 
 			 [0,-mf_length], 
 			 [mf_depth,-mf_length+mf_depth*tan(90-mf_angle)], 
@@ -103,8 +110,8 @@ module inner_duct_profile()
 {
 	cd_hwidth = cd_width/2;
 	polygon([[cd_hwidth-mf_depth-cd_shell, cd_height+s],
-	 [cd_hwidth-mf_depth-cd_shell, cd_height-mf_length],
-	 [cd_hwidth-cd_shell, cd_height-mf_length-mf_depth*tan(90-mf_angle)],
+	 [cd_hwidth-mf_depth-cd_shell, cd_height-mf_length-mf_top_offset],
+	 [cd_hwidth-cd_shell, cd_height-mf_length-mf_top_offset-mf_depth*tan(45)],
 	 [cd_hwidth-cd_shell, cd_shell],
 	 [0, cd_shell],
 	 [0, cd_height+s]]);
@@ -151,22 +158,24 @@ module create_duct_profile()
 */
 module create_cover_profile()
 {
-	translate([cd_width/2+tol, cd_height-mf_top_offset, 0])
-	mirror([1, 0])
-	clip_profile();
-	
-	translate([-cd_width/2-tol, cd_height-mf_top_offset, 0])
-	clip_profile();
-	
-	polygon([[cd_width/2+tol, cd_height-mf_top_offset-mf_length],
-			 [cd_width/2+tol, cd_height+tol],
-			 [-cd_width/2-tol, cd_height+tol],
-			 [-cd_width/2-tol, cd_height-mf_top_offset-mf_length],
-			 [-cd_width/2-tol-cd_shell, cd_height-mf_top_offset-mf_length],
-			 [-cd_width/2-tol-cd_shell, cd_height+tol+cd_shell],
-			 [cd_width/2+tol+cd_shell, cd_height+tol+cd_shell],
-			 [cd_width/2+tol+cd_shell, cd_height-mf_top_offset-mf_length],
-			]);
+	union() {
+		translate([cd_width/2+tol, cd_height-mf_top_offset, 0])
+		mirror([1, 0])
+		clip_profile();
+		
+		translate([-cd_width/2-tol, cd_height-mf_top_offset, 0])
+		clip_profile();
+		
+		polygon([[cd_width/2+tol, cd_height-mf_top_offset-mf_length],
+				 [cd_width/2+tol, cd_height+tol],
+				 [-cd_width/2-tol, cd_height+tol],
+				 [-cd_width/2-tol, cd_height-mf_top_offset-mf_length],
+				 [-cd_width/2-tol-cd_shell, cd_height-mf_top_offset-mf_length],
+				 [-cd_width/2-tol-cd_shell, cd_height+tol+cd_shell],
+				 [cd_width/2+tol+cd_shell, cd_height+tol+cd_shell],
+				 [cd_width/2+tol+cd_shell, cd_height-mf_top_offset-mf_length],
+				]);
+	}
 }
 
 /*
@@ -199,6 +208,8 @@ module create_duct()
 module create_cover() 
 {
 	color(col)
+	translate([2*cd_width, 0, cd_height+tol+cd_shell])
+	rotate(180, [0, 1, 0])
 	rotate(90, [1, 0, 0])
 	linear_extrude(height=cd_length, center=false)
 	create_cover_profile();
