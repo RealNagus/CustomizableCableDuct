@@ -43,7 +43,7 @@ cd_fin_width = 3;
 // Shell thickness (should be a multiple of your nozzle diameter)
 cd_shell = 1.2;
 // Force equal cover width - no overlap
-cd_cover_equalwidth = true; // [true, false]
+cd_cover_equalwidth = 1; // [0:false, 1:true]
 
 // Which part to create? Duct, cover or both.
 part = "both"; // [duct:Cable duct,cover:Duct top cover,both:Both parts]
@@ -63,7 +63,7 @@ mf_top_tolerance = 0.15;
 
 /* [Cover text] */
 // Show the text?
-text_enable = true; // [true, false]
+text_enable = 1; // [0:false, 1:true]
 // The text
 text_string = "thing:3775502";
 // Engraving depth, should be a multiple of layer height
