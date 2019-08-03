@@ -10,13 +10,16 @@
  * https://www.dream-dimensions.de
  * https://www.thingiverse.com/thing:3775502
  *
- * Version: 1.1 (2019-08-01)
+ * Version: 1.1 (2019-08-03)
  *
  * ChangeLog:
- *  - Added text capabilities (2019-08-01)
- *    You can add custom text to the cover
- *  - Initial release (2019-07-28)
- *    model creation works, first print successful.
+ *  ## v1.1  (2019-08-03)
+ *  ### Added
+ *	- Add some custom text to your duct's cover
+ *  - Option to create a cover with the same width as the duct, for narrow places
+ *
+ *  ## v1.0  (2019-07-28)
+ *  - model creation works, first print successful.
  */
  
  
@@ -28,11 +31,11 @@
 
 /* [General settings] */
 // Cable duct overall length
-cd_length = 70;
+cd_length = 100;
 // Cable duct width
-cd_width = 10;
+cd_width = 15;
 // Cable duct height
-cd_height = 10;
+cd_height = 15;
 // Number of fins
 cd_fins = 8;
 // Fin width
@@ -40,7 +43,7 @@ cd_fin_width = 3;
 // Shell thickness (should be a multiple of your nozzle diameter)
 cd_shell = 1.2;
 // Force equal cover width - no overlap
-cd_cover_equalwidth = 1; // [true, false]
+cd_cover_equalwidth = true; // [true, false]
 
 // Which part to create? Duct, cover or both.
 part = "both"; // [duct:Cable duct,cover:Duct top cover,both:Both parts]
@@ -62,11 +65,11 @@ mf_top_tolerance = 0.15;
 // Show the text?
 text_enable = true; // [true, false]
 // The text
-text_string = "I see cables!";
+text_string = "thing:3775502";
 // Engraving depth, should be a multiple of layer height
 text_depth = 0.6;
 // Scaling relative to duct width
-text_scale = 0.6;
+text_scale = 0.5;
 // The font to use
 text_font = "DejaVu Sans";
 
@@ -82,7 +85,8 @@ cd_slit_width = cd_fin_spacing - cd_fin_width;
 
 
 // Create the part
-render() print_part();
+render()
+print_part();
 
 /*
 	Create the part based on the part-variable: duct, cover or both
@@ -101,6 +105,19 @@ module print_part()
 
 
 /*
+ Create each children and a mirrored version of it along the given axis.
+ */
+module create_and_mirror(axis)
+{
+	for (i=[0:$children-1]) {
+		children(i);
+		mirror(axis) children(i);
+	}	
+}
+
+
+
+/*
 	Generates a trapezoidal profile that serves as a mounting feature for a	cover.
 */
 module clip_profile(forCover)
@@ -116,16 +133,6 @@ module clip_profile(forCover)
 			 [mf_depth,-mf_length+mf_depth*tan(90-mf_angle)], 
 			 [mf_depth,-mf_depth*tan(90-mf_angle)]];
 	polygon(polyp);
-    
-    if (cd_cover_equalwidth && ! forCover)
-    {
-        polygon([[0,0],
-                 [0, mf_top_offset],
-                 [-cd_shell, mf_top_offset],
-                 [-cd_shell, -mf_length-cd_shell*tan(mf_angle)],
-                 [0, -mf_length],
-                 ]);
-    }
 }
 
 
@@ -162,24 +169,37 @@ module create_duct_profile()
 				translate([-0.5, 0])
 				square(1, center=false);
 				
-				union() {
-                    xoffset = cd_cover_equalwidth ? mf_depth+mf_top_tolerance : 0;
-                    
-                    translate([-cd_width/2-s+xoffset+mf_top_tolerance, cd_height-mf_top_offset])
-                    clip_profile();
-                    translate([cd_width/2+s-xoffset, cd_height-mf_top_offset])
-                    mirror([1, 0])
-                    clip_profile();
+				if (cd_cover_equalwidth)
+				{
+					union() {
+						create_and_mirror([1, 0]) {
+							translate([-cd_width/2-s+cd_shell+mf_top_tolerance, cd_height-mf_top_offset])
+							clip_profile();
+							translate([-cd_width/2, cd_height-mf_top_offset])
+							polygon([[0,mf_top_offset],
+									 [cd_shell+mf_top_tolerance, mf_top_offset],
+									 [cd_shell+mf_top_tolerance, -mf_length],
+									 [cd_shell+mf_top_tolerance*(1-cos(mf_angle)), -mf_length-mf_top_tolerance*cos(mf_angle)],
+									 [0, -mf_length-mf_top_tolerance*cos(mf_angle)]]);
+						}
+					}
+					
+				} else {
+					union() {
+						create_and_mirror([1,0]) {
+							translate([-cd_width/2-s, cd_height-mf_top_offset])
+							clip_profile();
+						}
+					}
 				}
 			}
 		}
 		union() {
+			create_and_mirror([1,0]) {
             inner_duct_profile();
-            mirror([1, 0])
-            inner_duct_profile();
+			}
 		}
 	}
-
 }
 
 /*
@@ -190,12 +210,11 @@ module create_cover_profile()
 	union() {
         xoffset = cd_cover_equalwidth ? cd_shell+mf_top_tolerance : 0;
         
-		translate([cd_width/2+mf_top_tolerance-xoffset, cd_height-mf_top_offset, 0])
-		mirror([1, 0])
-		clip_profile(1);
-		
-		translate([-cd_width/2-mf_top_tolerance+xoffset, cd_height-mf_top_offset, 0])
-		clip_profile(1);
+		create_and_mirror([1,0]) {
+			translate([cd_width/2+mf_top_tolerance-xoffset, cd_height-mf_top_offset, 0])
+			mirror([1, 0])
+			clip_profile(1);
+		}
 		
 		polygon([[cd_width/2+mf_top_tolerance-xoffset, cd_height-mf_top_offset-mf_length],
 				 [cd_width/2+mf_top_tolerance-xoffset, cd_height+mf_top_tolerance],
@@ -239,8 +258,8 @@ module create_cover()
 {
 	color(col)
     difference() {
-        //translate([2*cd_width, 0, cd_height+mf_top_tolerance+cd_shell])
-        //rotate(180, [0, 1, 0])
+        translate([2*cd_width, 0, cd_height+mf_top_tolerance+cd_shell])
+        rotate(180, [0, 1, 0])
         rotate(90, [1, 0, 0])
         linear_extrude(height=cd_length, center=false)
         create_cover_profile();
