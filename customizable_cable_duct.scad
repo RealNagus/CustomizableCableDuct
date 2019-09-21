@@ -2,10 +2,22 @@
  * Parametric cable duct with cover
  * ========================================
  *
- * Create your own custom cable duct with desired dimensions and matching top cover.
+ * Parametric cable duct creator with OpenSCAD
+ * Copyright (C) 2019  Thomas Hessling <mail@dream-dimensions.de>
  *
- * Created by Thomas Hessling <mail@dream-dimensions.de>. 
- * License: Creative Commons - Attribution - Non-Commercial - Share Alike
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.*
+ * Create your own custom cable duct with desired dimensions and matching top cover.
  *
  * https://www.dream-dimensions.de
  * https://www.thingiverse.com/thing:3775502
@@ -13,6 +25,10 @@
  * Version: 1.1 (2019-08-03)
  *
  * ChangeLog:
+ *  ## v1.1a (2019-09-21)
+ *  ### Changes
+ *  - Changed the license to GPLv3.
+ *
  *  ## v1.1  (2019-08-03)
  *  ### Added
  *	- Add some custom text to your duct's cover

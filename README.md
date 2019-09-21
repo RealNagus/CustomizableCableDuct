@@ -19,6 +19,5 @@ Alternatively you can use the Thingiverse Customizer: https://www.thingiverse.co
 
 ## License
 
-This project is licensed under the Creative Commons - Attribution - Non-Commercial - Share Alike License - 
-see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the GNU General Public License v3 (or any later) - see the [LICENSE.md](LICENSE.md) file for details
 
