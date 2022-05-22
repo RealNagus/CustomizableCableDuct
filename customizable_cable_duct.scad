@@ -20,11 +20,18 @@
  * Create your own custom cable duct with desired dimensions and matching top cover.
  *
  * https://www.dream-dimensions.de
- * https://www.thingiverse.com/thing:3775502
+ * https://www.printables.com/model/20033-customizable-cable-duct
  *
- * Version: 1.1 (2019-08-03)
+ * Version: 1.2 (2022-05-22)
  *
  * ChangeLog:
+ *  ## v1.2 (2022-05-22)
+ *  ### Changes
+ *  - Changed the default text and set it to disabled.
+ *  ### Added
+ *  - Implemented mounting holes designed by user "3dcase" on https://www.printables.com
+ *    (https://www.printables.com/social/244030-3dcase/about)
+ *
  *  ## v1.1a (2019-09-21)
  *  ### Changes
  *  - Changed the license to GPLv3.
@@ -59,7 +66,14 @@ cd_fin_width = 3;
 // Shell thickness (should be a multiple of your nozzle diameter)
 cd_shell = 1.2;
 // Force equal cover width - no overlap
-cd_cover_equalwidth = 1; // [0:false, 1:true]
+cd_cover_equalwidth = 0; // [0:false, 1:true]
+
+// Number of mounting holes
+cd_hole_count = 3;
+// Mounting hole diameter
+cd_hole_diameter = 3.3;
+// Mounting hole offset from the edge
+cd_hole_offset = 10;
 
 // Which part to create? Duct, cover or both.
 part = "both"; // [duct:Cable duct,cover:Duct top cover,both:Both parts]
@@ -79,9 +93,9 @@ mf_top_tolerance = 0.15;
 
 /* [Cover text] */
 // Show the text?
-text_enable = 1; // [0:false, 1:true]
+text_enable = 0; // [0:false, 1:true]
 // The text
-text_string = "thing:3775502";
+text_string = "Cables inside";
 // Engraving depth, should be a multiple of layer height
 text_depth = 0.6;
 // Scaling relative to duct width
@@ -98,6 +112,11 @@ s = 0.01;
 
 cd_fin_spacing = (cd_length - cd_fin_width) / cd_fins;
 cd_slit_width = cd_fin_spacing - cd_fin_width;
+
+// we have to take care if only 1 or 0 holes are specified
+// the "x = ? a : b" syntax must be used because variables defined/changed inside 
+// an if() scope do not effect their value outside that scope
+cd_hole_spacing = cd_hole_count > 1 ? (cd_length-2*cd_hole_offset)/(cd_hole_count-1) : (cd_hole_count == 1 ? cd_length/2 : 0);
 
 
 // Create the part
@@ -212,7 +231,7 @@ module create_duct_profile()
 		}
 		union() {
 			create_and_mirror([1,0]) {
-            inner_duct_profile();
+                inner_duct_profile();
 			}
 		}
 	}
@@ -253,14 +272,31 @@ module create_duct()
 	color(col)
 	rotate(90, [1, 0, 0])
 	difference() {
+        // extrude the duct profile
 		linear_extrude(height=cd_length, center=false)
 		create_duct_profile();
         
+        // create a series of boxes to cut through the extruded profile
+        // also subtract cylinder of mounting holes
 		union() {
+            // boxes
 			for (i = [0:cd_fins-1]) {
 				translate([-cd_width/2-1, 3*cd_shell, i*cd_fin_spacing+cd_fin_width])
 				cube([cd_width+2, cd_height+1, cd_fin_spacing-cd_fin_width]);
 			}
+            // mounting hole cylinders
+            if (cd_hole_count > 1)
+            {
+                for (i = [0:cd_hole_count-1]) {
+                    translate([0, 0, cd_hole_offset+i*cd_hole_spacing])
+                    rotate([90, 0, 0])
+                    cylinder(h=4*cd_shell, d=cd_hole_diameter, center=true, $fn=60);
+                }
+            } else if (cd_hole_count == 1) {
+                translate([0, 0, cd_hole_spacing])
+                rotate([90, 0, 0])
+                cylinder(h=4*cd_shell, d=cd_hole_diameter, center=true, $fn=60);
+            }
 		}
 	}
 	
