@@ -73,6 +73,8 @@ cd_fin_width = 3;
 cd_shell = 1.2;
 // Force equal cover width - no overlap
 cd_cover_equalwidth = 0; // [0:false, 1:true]
+// Remark: since this setting is also used for the length, cd_cover_equalsize would be more appropriate
+
 // Create edge on cover to prevent shifting
 cd_cover_edge = "none"; // [one:one side closed,both:both sides closed,none: both sides open]
 //Resize the fins on one or both sides to make space for the recess
@@ -119,11 +121,15 @@ col = [0.3,0.5,0.85];
 // safety offset for boolean operations, prevents spurious surfaces
 s = 0.01;
 
-//length for cover with edges
+//length for cover with edges and without
 cd_length_cover = cd_length 
         - (cd_cover_equalwidth && cd_cover_edge == "one" ? cd_shell:0) 
-        - (cd_cover_equalwidth && cd_cover_edge == "both" ? 2*cd_shell:0);
-cd_fin_spacing = ((cd_fins_resize ? cd_length_cover : cd_length) - cd_fin_width) / cd_fins;
+        - (cd_cover_equalwidth && cd_cover_edge == "both" ? 2*cd_shell:0)
+        + (!cd_cover_equalwidth && cd_cover_edge == "one" ? mf_top_tolerance:0) 
+        + (!cd_cover_equalwidth && cd_cover_edge == "both" ? 2*mf_top_tolerance:0);
+
+//recalculate cd_fin_spacing for resizing first an last
+cd_fin_spacing = ((cd_fins_resize && cd_cover_equalwidth ? cd_length_cover : cd_length) - cd_fin_width) / cd_fins;
 cd_slit_width = cd_fin_spacing - cd_fin_width;
 
 // we have to take care if only 1 or 0 holes are specified
@@ -312,12 +318,12 @@ module create_duct()
             }
             // space for recess if equalwidth is on
             if (cd_cover_equalwidth && cd_cover_edge != "none") {
-                translate([-cd_width/2, cd_height-cd_shell-mf_length-mf_top_tolerance-mf_top_offset,0])
-                cube([cd_width,cd_shell+mf_length+mf_top_tolerance+mf_top_offset,cd_shell], center=false);
+                translate([-cd_width/2, cd_height-mf_length-mf_top_tolerance-mf_top_offset,0])
+                cube([cd_width,mf_length+mf_top_tolerance+mf_top_offset,cd_shell+mf_top_tolerance], center=false);
             }
             if (cd_cover_equalwidth && cd_cover_edge == "both") {
-                translate([-cd_width/2, cd_height-cd_shell-mf_length-mf_top_tolerance-mf_top_offset,cd_length-cd_shell])
-                cube([cd_width,cd_shell+mf_length+mf_top_tolerance+mf_top_offset,cd_shell], center=false);
+                translate([-cd_width/2, cd_height-mf_length-mf_top_tolerance-mf_top_offset,cd_length-cd_shell-mf_top_tolerance])
+                cube([cd_width,mf_length+mf_top_tolerance+mf_top_offset,cd_shell+mf_top_tolerance*2], center=false);
             }
 
 		}
