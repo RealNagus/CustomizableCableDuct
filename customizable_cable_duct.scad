@@ -25,6 +25,12 @@
  * Version: 1.2 (2022-05-22)
  *
  * ChangeLog:
+ *  ## v1.3 (2024-10-06)
+ *  ### Added (by CrazyRaph)
+ *  - option added for cover with edge, to prevent shifting 
+ *  - add a little recess on first/last fin when cd_cover_equalwidth == true
+ *  - by adding recess there is an option to enlarge first/last fin
+ *
  *  ## v1.2 (2022-05-22)
  *  ### Changes
  *  - Changed the default text and set it to disabled.
@@ -67,6 +73,12 @@ cd_fin_width = 3;
 cd_shell = 1.2;
 // Force equal cover width - no overlap
 cd_cover_equalwidth = 0; // [0:false, 1:true]
+// Remark: since this setting is also used for the length, cd_cover_equalsize would be more appropriate
+
+// Create edge on cover to prevent shifting
+cd_cover_edge = "none"; // [one:one side closed,both:both sides closed,none: both sides open]
+//Resize the fins on one or both sides to make space for the recess
+cd_fins_resize = 0; // [0:false, 1:true]
 
 // Number of mounting holes
 cd_hole_count = 3;
@@ -77,7 +89,6 @@ cd_hole_offset = 10;
 
 // Which part to create? Duct, cover or both.
 part = "both"; // [duct:Cable duct,cover:Duct top cover,both:Both parts]
-
 
 /* [Mounting feature settings] */
 // Mounting feature height
@@ -110,7 +121,15 @@ col = [0.3,0.5,0.85];
 // safety offset for boolean operations, prevents spurious surfaces
 s = 0.01;
 
-cd_fin_spacing = (cd_length - cd_fin_width) / cd_fins;
+//length for cover with edges and without
+cd_length_cover = cd_length 
+        - (cd_cover_equalwidth && cd_cover_edge == "one" ? cd_shell:0) 
+        - (cd_cover_equalwidth && cd_cover_edge == "both" ? 2*cd_shell:0)
+        + (!cd_cover_equalwidth && cd_cover_edge == "one" ? mf_top_tolerance:0) 
+        + (!cd_cover_equalwidth && cd_cover_edge == "both" ? 2*mf_top_tolerance:0);
+
+//recalculate cd_fin_spacing for resizing first an last
+cd_fin_spacing = ((cd_fins_resize && cd_cover_equalwidth ? cd_length_cover : cd_length) - cd_fin_width) / cd_fins;
 cd_slit_width = cd_fin_spacing - cd_fin_width;
 
 // we have to take care if only 1 or 0 holes are specified
@@ -281,7 +300,7 @@ module create_duct()
 		union() {
             // boxes
 			for (i = [0:cd_fins-1]) {
-				translate([-cd_width/2-1, 3*cd_shell, i*cd_fin_spacing+cd_fin_width])
+				translate([-cd_width/2-1, 3*cd_shell, i*cd_fin_spacing+cd_fin_width+((cd_fins_resize && cd_cover_equalwidth && cd_cover_edge != "none")?cd_shell:0)])
 				cube([cd_width+2, cd_height+1, cd_fin_spacing-cd_fin_width]);
 			}
             // mounting hole cylinders
@@ -297,6 +316,16 @@ module create_duct()
                 rotate([90, 0, 0])
                 cylinder(h=4*cd_shell, d=cd_hole_diameter, center=true, $fn=60);
             }
+            // space for recess if equalwidth is on
+            if (cd_cover_equalwidth && cd_cover_edge != "none") {
+                translate([-cd_width/2, cd_height-mf_length-mf_top_tolerance-mf_top_offset,0])
+                cube([cd_width,mf_length+mf_top_tolerance+mf_top_offset,cd_shell+mf_top_tolerance], center=false);
+            }
+            if (cd_cover_equalwidth && cd_cover_edge == "both") {
+                translate([-cd_width/2, cd_height-mf_length-mf_top_tolerance-mf_top_offset,cd_length-cd_shell-mf_top_tolerance])
+                cube([cd_width,mf_length+mf_top_tolerance+mf_top_offset,cd_shell+mf_top_tolerance*2], center=false);
+            }
+
 		}
 	}
 	
@@ -308,20 +337,35 @@ module create_duct()
 */
 module create_cover() 
 {
-	color(col)
-    difference() {
-        translate([2*cd_width, 0, cd_height+mf_top_tolerance+cd_shell])
-        rotate(180, [0, 1, 0])
-        rotate(90, [1, 0, 0])
-        linear_extrude(height=cd_length, center=false)
-        create_cover_profile();
+    //some variables for the cover
+    y_off = (cd_cover_edge != "none" ? -cd_shell:0);
+    c_width = (cd_cover_equalwidth ? cd_width : cd_width + 2*(cd_shell + mf_top_tolerance));
+    
+    color(col)
+    union(){
+        difference() {
+            translate([2*cd_width, y_off, cd_height+mf_top_tolerance+cd_shell])
+            rotate(180, [0, 1, 0])
+            rotate(90, [1, 0, 0])
+            linear_extrude(height=cd_length_cover, center=false)
+            create_cover_profile();
 
-        if (text_enable) {
-            translate([2*cd_width, -cd_length/2, -s+0.6])
-            rotate(90, [0, 0, -1])
-            rotate(180, [1, 0, 0])
-            linear_extrude(height=text_depth, center=false)
-            text(text_string, cd_width*text_scale, text_font, valign="center", halign="center", $fn=32);
+            if (text_enable) {
+                translate([2*cd_width, -cd_length_cover/2, -s+0.6])
+                rotate(90, [0, 0, -1])
+                rotate(180, [1, 0, 0])
+                linear_extrude(height=text_depth, center=false)
+                text(text_string, cd_width*text_scale, text_font, valign="center", halign="center", $fn=32);
+            }
+        }
+        //Create edges on Cover
+        if (cd_cover_edge != "none") {
+            translate([2*cd_width-c_width/2,-cd_shell,0])
+            cube([c_width,cd_shell,cd_shell+mf_length+ mf_top_tolerance+mf_top_offset], center=false);
+        }
+        if (cd_cover_edge == "both") {
+            translate([2*cd_width-c_width/2,-cd_length_cover - 2*cd_shell,0])
+            cube([c_width,cd_shell,cd_shell+mf_length+ mf_top_tolerance+mf_top_offset], center=false);
         }
     }
 }
