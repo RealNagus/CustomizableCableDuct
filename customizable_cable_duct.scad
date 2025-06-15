@@ -22,9 +22,13 @@
  * https://www.dream-dimensions.de
  * https://www.printables.com/model/20033-customizable-cable-duct
  *
- * Version: 1.2 (2022-05-22)
  *
  * ChangeLog:
+ *
+ *  ## v1.4 (2025-06-15)
+ *  ### Added (by Jannik)
+ *  - option to add radius to the bottom of the fins added (cd_ra)
+ *
  *  ## v1.3 (2024-10-06)
  *  ### Added (by CrazyRaph)
  *  - option added for cover with edge, to prevent shifting 
@@ -74,6 +78,9 @@ cd_shell = 1.2;
 // Force equal cover width - no overlap
 cd_cover_equalwidth = 0; // [0:false, 1:true]
 // Remark: since this setting is also used for the length, cd_cover_equalsize would be more appropriate
+
+// Radius on fins (0 for none)
+cd_ra = 2;
 
 // Create edge on cover to prevent shifting
 cd_cover_edge = "none"; // [one:one side closed,both:both sides closed,none: both sides open]
@@ -197,13 +204,23 @@ module inner_duct_profile()
 {
 	cd_hwidth = cd_width/2;
     depth_factor = cd_cover_equalwidth ? 2 : 1;
-
+    difference(){
     polygon([[cd_hwidth-depth_factor*mf_depth-cd_shell, cd_height+s],
      [cd_hwidth-depth_factor*mf_depth-cd_shell, cd_height-mf_length-mf_top_offset],
      [cd_hwidth-cd_shell, cd_height-mf_length-mf_top_offset-depth_factor*mf_depth*tan(45)],
      [cd_hwidth-cd_shell, cd_shell],
      [0, cd_shell],
-     [0, cd_height+s]]);
+     [0, cd_height+s]
+        ]);
+        difference() {
+            cd_hwidth = cd_width/2;
+            depth_factor = cd_cover_equalwidth ? 2 : 1;
+            translate([cd_hwidth-cd_shell, cd_shell]) // place a champfer
+            difference() {
+            rotate([0, 0, 45]) square([cd_shell, cd_shell], center=true);
+            }
+        }
+    }
 }
 
 /*
@@ -290,19 +307,48 @@ module create_duct()
 {
 	color(col)
 	rotate(90, [1, 0, 0])
-	difference() {
+    
+	difference() {//difference
         // extrude the duct profile
 		linear_extrude(height=cd_length, center=false)
 		create_duct_profile();
-        
-        // create a series of boxes to cut through the extruded profile
-        // also subtract cylinder of mounting holes
+        //add box and other mountig hole
 		union() {
-            // boxes
-			for (i = [0:cd_fins-1]) {
-				translate([-cd_width/2-1, 3*cd_shell, i*cd_fin_spacing+cd_fin_width+((cd_fins_resize && cd_cover_equalwidth && cd_cover_edge != "none")?cd_shell:0)])
-				cube([cd_width+2, cd_height+1, cd_fin_spacing-cd_fin_width]);
-			}
+            difference() {
+                // boxes
+                for (i = [0:cd_fins-1]) {
+                    difference() {
+                        translate([-cd_width/2-1, 3*cd_shell, i*cd_fin_spacing+cd_fin_width+((cd_fins_resize && cd_cover_equalwidth && cd_cover_edge != "none")?cd_shell:0)])
+                            cube([cd_width+2, cd_height+1, cd_fin_spacing-cd_fin_width]);
+                        //radius in box, if greater 0
+                        if (cd_ra > 0) {
+                            //move form origin to box
+                            translate([0, (3*cd_shell)+cd_ra-s, (i*cd_fin_spacing+cd_fin_width)+(cd_ra)])
+                            //connecting the two parts
+                            union() {
+                                //Creation of the negative circular segment
+                                difference() {
+                                    translate([0,-cd_ra/2,-cd_ra/2])
+                                        cube([cd_width+3,cd_ra,cd_ra],center = true);
+                                    rotate([0,90,0])
+                                        cylinder(h=cd_width+4,r=cd_ra, center=true, $fn=60);
+                                }
+                                translate([0,0,cd_fin_spacing-cd_fin_width-cd_ra-cd_ra])
+                                mirror([0, 0, 1]) {
+                                    //Creation of the negative circular segment
+                                    difference(){
+                                        translate([0,-cd_ra/2,-cd_ra/2])
+                                            cube([cd_width+3,cd_ra,cd_ra],center = true);
+                                        rotate([0,90,0])
+                                            cylinder(h=cd_width+4,r=cd_ra, center=true, $fn=60);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
             // mounting hole cylinders
             if (cd_hole_count > 1)
             {
